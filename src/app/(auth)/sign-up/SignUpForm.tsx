@@ -16,36 +16,26 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { signUpNewUser } from '@/lib/actions/user.actions';
-
-
-const formSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+import { signUpSchema } from '@/lib/validations/auth';
+import { useRouter } from 'next/navigation';
 
 const SignUpForm = () => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const router = useRouter();
+  const form = useForm<z.infer<typeof signUpSchema>>({
+    resolver: zodResolver(signUpSchema),
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof signUpSchema>) {
     try {
       console.log(values);
-      signUpNewUser({
-        email: values.email,
-        password: values.password,
-      }).then((result) => {
-        if (result.success) {
-          toast.success('User signed up successfully!');
-        } else {
-          toast.error(`Error signing up user: ${result.error}`);
-        }
-      });
-      form.reset();
+      const result = await signUpNewUser(values);
+      if (result.success) {
+        toast.success('User signed up successfully!');
+        router.push('/dashboard');
+        form.reset();
+      } else {
+        toast.error(`Failed to sign up: ${result.error}`);
+      }
     } catch (error) {
       console.error('Form submission error', error);
       toast.error('Failed to submit the form. Please try again.');
@@ -65,7 +55,11 @@ const SignUpForm = () => {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="your.email@example.com" type="email" {...field} />
+                <Input
+                  placeholder="your.email@example.com"
+                  type="email"
+                  {...field}
+                />
               </FormControl>
               <FormDescription>
                 Enter your email address to create an account.
@@ -84,7 +78,9 @@ const SignUpForm = () => {
               <FormControl>
                 <Input placeholder="Password" type="password" {...field} />
               </FormControl>
-              <FormDescription>Enter your password (minimum 6 characters).</FormDescription>
+              <FormDescription>
+                Enter your password (minimum 6 characters).
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -97,9 +93,15 @@ const SignUpForm = () => {
             <FormItem>
               <FormLabel>Confirm Password</FormLabel>
               <FormControl>
-                <Input placeholder="Confirm Password" type="password" {...field} />
+                <Input
+                  placeholder="Confirm Password"
+                  type="password"
+                  {...field}
+                />
               </FormControl>
-              <FormDescription>Re-enter your password to confirm.</FormDescription>
+              <FormDescription>
+                Re-enter your password to confirm.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
